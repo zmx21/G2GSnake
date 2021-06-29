@@ -1,0 +1,103 @@
+configfile: "../config/config.yaml"
+import pandas as pd
+aa_tbl = pd.read_table(config["pathogen_tbl"])
+variants = list(aa_tbl.columns.values)
+
+rule all:
+    input:
+       "../results/gene_X_pos_0148_C.log"
+       #expand("../results/{variant}.log",variant=variants)
+                        
+rule host_QC:
+    input:
+        vcf=config["host_VCF"],
+        covar_file=config["covar_file"]
+    output:
+        bed="../results/tmp/G2G_QC.bed",
+        bim="../results/tmp/G2G_QC.bim",
+        fam="../results/tmp/G2G_QC.fam"
+    params:
+        MAF=config["host_MAF"],
+        missing=config["host_missing"],
+        HWE=config["host_HWE"]
+    conda:
+        "envs/QC.yaml"
+    shell:
+        "plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} --geno {params.missing} --mind {params.missing} --hwe {params.HWE} --make-bed --out ../results/tmp/G2G_QC --threads {threads}"
+
+rule host_PCA:
+    input:
+        bed="../results/tmp/G2G_QC.bed",
+        bim="../results/tmp/G2G_QC.bim",
+        fam="../results/tmp/G2G_QC.fam"
+    output:
+        eigenval="../results/tmp/G2G_QC.eigenval",
+        eigenvec="../results/tmp/G2G_QC.eigenvec"
+    params:
+        N_PC=config["N_PC"]
+    conda:
+        "envs/QC.yaml"
+    shell:
+        "gcta64  --threads {threads} --bfile ../results/tmp/G2G_QC  --autosome  --make-grm  --out ../results/tmp/G2G_QC; gcta64 --threads {threads} --grm ../results/tmp/G2G_QC --pca {params.N_PC} --out ../results/tmp/G2G_QC"
+
+
+rule pathogen_pPCA: 
+    input:
+        tbl=config["pathogen_tbl"],
+        nw=config["nw_file"],
+        covar_file=config["covar_file"]
+    output:
+        "../results/tmp/pPCA.txt"
+    threads: 1
+    params:
+        N_pPC=config["N_pPC"]
+    conda:
+        "envs/QC.yaml"
+    shell:
+        "Rscript ./scripts/Pathogen_QC_pPCA.R {input.tbl} {input.nw} {params.N_pPC} {input.covar_file} {output}"
+
+rule merge_covar:
+    input:
+        pPCA="../results/tmp/pPCA.txt",
+        PCA="../results/tmp/G2G_QC.eigenvec",
+        covar_file=config["covar_file"],
+        tbl=config["pathogen_tbl"],
+    output:
+        merged_covar="../results/tmp/merged_covar.txt",
+        aa_tbl_joined='../results/tmp/aa_tbl_joined.txt'
+    threads: 1
+    conda:
+        "envs/QC.yaml"
+    script:
+        "./scripts/merge_covars.py"
+
+rule split_tbl:
+    input:
+        aa_tbl_joined='../results/tmp/aa_tbl_joined.txt'
+    output:
+        dynamic("../results/tmp/pathogen_variants/{variant}")
+    params:
+        out_dir="../results/tmp/pathogen_variants/"
+    threads: 1
+    conda:
+        "envs/QC.yaml"
+    shell:
+        "python ./scripts/split_tbl.py {wildcards.variant} {input.aa_tbl_joined} {params.out_dir}"
+
+rule G2G:
+    input:
+        aa_variant=dynamic("../results/tmp/pathogen_variants/{variant}"),
+        bed="../results/tmp/G2G_QC.bed",
+        bim="../results/tmp/G2G_QC.bim",
+        fam="../results/tmp/G2G_QC.fam",
+        covar="../results/tmp/merged_covar.txt"
+    params:
+        host_geno="../results/tmp/G2G_QC",
+    output:
+        "../results/{variant}.log"
+    conda:
+        "envs/G2G.yaml"
+    threads: 22
+    shell:
+        "plink2 --pheno {input.aa_variant} --bfile {params.host_geno} --logistic --1 --covar {input.covar} --out ../results/{wildcards.variant} --threads {threads}" 
+                

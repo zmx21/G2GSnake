@@ -1,0 +1,6 @@
+channels:
+  - bioconda
+dependencies:
+  - plink2 =2.0
+  - plink =1.9
+  - gcta =1.93.2

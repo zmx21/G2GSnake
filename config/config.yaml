@@ -1,0 +1,13 @@
+host_VCF: "../raw_data/host/hbv_gilead_QC_SAIGE.vcf.gz"
+covar_file: "../raw_data/hbv_gilead_QC_SAIGE.tsv"
+pathogen_tbl: "../raw_data/pathogen/HBV_WG+og_rr.AA_Table.txt"
+nw_file: "../raw_data/pathogen/HBV_WG+og_rr.nw"
+
+
+host_MAF: 0.05
+host_missing: 0.1
+host_HWE: 1e-6
+N_PC: 5
+
+pathogen_MAC: 10
+N_pPC: 6
