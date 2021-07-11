@@ -1,24 +1,87 @@
 configfile: "../config/config.yaml"
-import pandas as pd
-aa_tbl = pd.read_table(config["pathogen_tbl"])
-variants = list(aa_tbl.drop(columns=["PID"]).columns.values)
+genes_to_run=config["genes"].split(',')
 
 rule all:
     input:
-        #"../results/G2G_Results.bmat"
-        "../results/gene_S_pos_0017_A.allchr.txt"
+        tbl=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",gene=genes_to_run),
+        variants=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",gene=genes_to_run),
+        info=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.info",gene=genes_to_run)
 
 rule summarize:
     input:
-        expand("../results/{variant}.allchr.txt",variant=variants)
+        tbl=expand("../results/Gene_{gene}/log.out",gene=genes_to_run),
+        host_variants='../results/tmp/G2G_QC.variants'
     output:
         "../results/G2G_Results.bmat"
     conda:
         "envs/QC.yaml"
     threads: 1
     shell:
-        "Rscript ./scripts/Summarize_G2G.R {input}"
-        
+        "Rscript ./scripts/Summarize_G2G.R {input.tbl} {input.host_variants} {output}"
+
+if config["pathogen_input"] == 'fasta':
+    print('Pathogen FASTA input')
+    rule expand_fasta:
+        input:
+            seq=config["pathogen_fasta"],
+            ref=config["pathogen_ref"],
+            gff=config["pathogen_gff"]
+        output:
+            "../results/tmp/pathogen.expanded.fasta"
+        conda:
+            "envs/QC.yaml"
+        threads: 20
+        shell:
+            """
+            Rscript ./scripts/Expand_FASTA.R {input.seq} {output} {threads}
+            """
+
+    rule nextalign:
+        input:
+            "../results/tmp/pathogen.expanded.fasta",
+            ref=config["pathogen_ref"],
+            gff=config["pathogen_gff"]
+        output:
+            expand("../results/FASTA_AA/pathogen.expanded.gene.{gene}.fasta",gene=genes_to_run)
+        conda:
+            "envs/QC.yaml"
+        threads: 1
+        shell:
+            """
+                nextalign --sequences=../results/tmp/pathogen.expanded.fasta \
+                --reference={input.ref} \
+                --genemap={input.gff} \
+                --genes {config[genes]} \
+                --output-dir=../results/FASTA_AA/ 2> ../results/FASTA_AA/nextalign.log
+            """
+
+    rule make_aa_tbl:
+        input:
+            fasta="../results/FASTA_AA/pathogen.expanded.gene.{gene}.fasta",
+            covar=config["covar_file"]
+        output:
+            tbl=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",
+            info=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.info"
+        conda:
+            "envs/QC.yaml"
+        threads: 1
+        shell:
+            """
+                Rscript ./scripts/FASTA_to_Tbl.R {input.fasta} {input.covar} {output.tbl} {output.info}
+            """
+elif config["pathogen_input"] == 'aa_tbl': 
+        import os.path
+
+        print('Pathogen AA Table Input')
+        all_path=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt"
+        for path in all_path:
+            if os.path.isfile(path):
+                print('Invalid Pathogen AA Table Path')
+                sys.exit()
+else:
+    print('Please specify type of pathogen_input in config file')
+    sys.exit()
+
 rule host_QC:
     input:
         vcf=config["host_VCF"],
@@ -73,10 +136,10 @@ rule host_PCA:
 
 rule pathogen_pPCA: 
     input:
-        tbl=config["pathogen_tbl"],
+        tbl=expand(config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",gene=genes_to_run),
         nw=config["nw_file"]
     output:
-        "../results/tmp/pPCA.txt"
+        "../results/tmp/Gene_{gene}/pPCA_gene_{gene}.txt"
     threads: 1
     params:
         N_pPC=config["N_pPC"]
@@ -87,23 +150,26 @@ rule pathogen_pPCA:
 
 rule merge_covar:
     input:
-        pPCA="../results/tmp/pPCA.txt",
+        pPCA="../results/tmp/Gene_{gene}/pPCA_gene_{gene}.txt",
         PCA="../results/tmp/G2G_QC.eigenvec",
         covar_file=config["covar_file"]
     output:
-        merged_covar="../results/tmp/merged_covar.txt"
+        merged_covar="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt"
     threads: 1
     conda:
         "envs/QC.yaml"
     shell:
-        "Rscript ./scripts/Merge_Covars.R {input.covar_file}"
+        "Rscript ./scripts/Merge_Covars.R {input.covar_file} {input.pPCA} {input.PCA} {output.merged_covar}"
 
 rule pathogen_QC:
     input:
-        tbl=config["pathogen_tbl"],
-        covar_file="../results/tmp/merged_covar.txt"
+        tbl=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",
+        info=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.info",
+        covar_file="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt"
     output:
-        dynamic("../results/tmp/pathogen_variants/{variant}")
+        tbl="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",
+        variants="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",
+        info="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.info"
     threads: 1
     params:
         pathogen_MAC=config["pathogen_MAC"],
@@ -111,69 +177,51 @@ rule pathogen_QC:
     conda:
         "envs/QC.yaml"
     shell:
-        "Rscript ./scripts/Pathogen_QC.R {input.covar_file} {input.tbl} {params.pathogen_MAC} {params.pathogen_missing} {wildcards.variant}"
-
-#rule G2G:
-#    input:
-#        aa_variant=dynamic("../results/tmp/pathogen_variants/{variant}"),
-#        bed="../results/tmp/G2G_QC.bed",
-#        bim="../results/tmp/G2G_QC.bim",
-#        fam="../results/tmp/G2G_QC.fam",
-#        covar="../results/tmp/merged_covar.txt"
-#    params:
-#        host_geno="../results/tmp/G2G_QC"
-#    output:
-#        "../results/{variant}.log"
-#    conda:
-#        "envs/G2G.yaml"
-#    threads: 22
-#    shell:
-#        """ 
-#            if [ -s {input.aa_variant} ]
-#            then
-#                plink2 --pheno {input.aa_variant} --bfile {params.host_geno} --glm firth hide-covar --1 --covar {input.covar} -#-out ../results/{wildcards.variant} --threads {threads}
-#            else
-#                echo 'Did not pass QC' > ../results/{wildcards.variant}.log
-#            fi
-#        """
+        "Rscript ./scripts/Pathogen_QC.R {input.covar_file} {input.tbl} {input.info} {params.pathogen_MAC} {params.pathogen_missing} {output.tbl} {output.variants} {output.info}"
 
 rule G2G_Saige:
     input:
-        aa_variant=dynamic("../results/tmp/pathogen_variants/{variant}"),
+        aa_tbl="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",
+        patho_variants="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",
         bed="../results/tmp/G2G_QC.bed",
         bim="../results/tmp/G2G_QC.bim",
         fam="../results/tmp/G2G_QC.fam",
-        covar="../results/tmp/merged_covar.txt",
+        covar="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt",
         vcf='../results/tmp/G2G_QC.vcf.gz',
         variants='../results/tmp/G2G_QC.variants'
     params:
         host_geno="../results/tmp/G2G_QC"
     output:
-        "../results/{variant}.allchr.txt"
+        "../results/Gene_{gene}/log.out"
     container: 
         "docker://wzhou88/saige:0.44.2"
     threads: 22
     shell:
-        """
-        mkdir -p /results/tmp/SAIGE/
-        touch "/results/"{wildcards.variant}".allchr.txt"
-        if [ -s /results/tmp/pathogen_variants/{wildcards.variant} ]
-        then
-            step1_fitNULLGLMM.R \
+        """ 
+            mkdir -p /results/tmp/SAIGE/
+            touch  /results/Gene_{wildcards.gene}/log.out
+            
+            #Read in Pathogen variants for each gene to loop through 
+            readarray -t patho_variants < <(cat /results/tmp/Gene_{wildcards.gene}/AA_Tbl_Gene_{wildcards.gene}_QC.variants)
+            
+            for cur_var in "${{patho_variants[@]}}"
+            do
+                echo "Running SAIGE on: "$cur_var
+                step1_fitNULLGLMM.R \
                 --plinkFile=/results/tmp/G2G_QC \
-                --phenoFile=/results/tmp/pathogen_variants/{wildcards.variant} \
-                --phenoCol={wildcards.variant} \
-                --covarColList=$(sed 's/ /,/g' /results/tmp/merged_covar.txt | head -n 1 | sed 's/IID,//' | sed 's/PID,//') \
+                --phenoFile=/results/tmp/Gene_{wildcards.gene}/AA_Tbl_Gene_{wildcards.gene}_QC.txt\
+                --phenoCol=$cur_var \
+                --covarColList=$(sed 's/ /,/g' /results/tmp/Gene_{wildcards.gene}/merged_covar_gene_{wildcards.gene}.txt | head -n 1 | sed 's/IID,//' | sed 's/PID,//') \
                 --sampleIDColinphenoFile=IID \
                 --traitType=binary        \
-                --outputPrefix=/results/tmp/SAIGE/{wildcards.variant} \
+                --outputPrefix=/results/tmp/SAIGE/$cur_var \
                 --nThreads={threads} \
-                --LOCO=FALSE 2> "/results/tmp/SAIGE/"{wildcards.variant}".NULLGLMM.error" > "/results/tmp/SAIGE/"{wildcards.variant}".NULLGLMM.log" || true
-            if [ $(grep -v 'Loading required package:' /results/tmp/SAIGE/{wildcards.variant}.NULLGLMM.error | wc -l) -eq 0 ]
-            then 
-                for chr in $(seq 1 1 22)
-                do
-                    step2_SPAtests.R \
+                --LOCO=FALSE 2> "/results/tmp/SAIGE/"$cur_var".NULLGLMM.error" > "/results/tmp/SAIGE/"$cur_var".NULLGLMM.log" || true
+                if [ $(grep -v 'Loading required package:' /results/tmp/SAIGE/$cur_var.NULLGLMM.error | wc -l) -eq 0 ]
+                then 
+                    for chr in $(seq 1 1 22)
+                    do
+                        step2_SPAtests.R \
                         --vcfFile=/results/tmp/G2G_QC.vcf.gz \
                         --vcfField=GT \
                         --LOCO=FALSE \
@@ -181,30 +229,30 @@ rule G2G_Saige:
                         --minMAF={config[host_MAF]} \
                         --minMAC=3 \
                         --IsDropMissingDosages=TRUE \
-                        --GMMATmodelFile=/results/tmp/SAIGE/{wildcards.variant}.rda \
-                        --varianceRatioFile=/results/tmp/SAIGE/{wildcards.variant}.varianceRatio.txt \
-                        --SAIGEOutputFile="/results/tmp/SAIGE/"{wildcards.variant}".chr"$chr".txt" \
+                        --GMMATmodelFile="/results/tmp/SAIGE/"$cur_var".rda" \
+                        --varianceRatioFile="/results/tmp/SAIGE/"$cur_var".varianceRatio.txt" \
+                        --SAIGEOutputFile="/results/tmp/SAIGE/"$cur_var".chr"$chr".txt" \
                         --numLinesOutput=2147483647 \
-                        --IsOutputAFinCaseCtrl=TRUE 2> "/results/tmp/SAIGE/"{wildcards.variant}".SPAtest.error" > "/results/tmp/SAIGE/"{wildcards.variant}".SPAtest.log" || true &
-                done
-            wait
-                if [ -f "/results/tmp/SAIGE/"{wildcards.variant}".chr1.txt" ] 
+                        --IsOutputAFinCaseCtrl=TRUE 2> "/results/tmp/SAIGE/"$cur_var".SPAtest.error" > "/results/tmp/SAIGE/"$cur_var".SPAtest.log" || true &
+                    done
+                    wait
+                    if [ -f "/results/tmp/SAIGE/"$cur_var".chr1.txt" ] 
                     then
-                        head -n 1 "/results/tmp/SAIGE/"{wildcards.variant}".chr1.txt" > "/results/"{wildcards.variant}".allchr.txt"
+                        head -n 1 "/results/tmp/SAIGE/"$cur_var".chr1.txt" > "/results/Gene_{wildcards.gene}/"$cur_var".allchr.txt"
                         for chr in $(seq 1 1 22)
                         do
-                            grep -v 'CHR' "/results/tmp/SAIGE/"{wildcards.variant}".chr"$chr".txt" \
-                            >> "/results/"{wildcards.variant}".allchr.txt"
-                            rm "/results/tmp/SAIGE/"{wildcards.variant}".chr"$chr".txt"
+                            grep -v 'CHR' "/results/tmp/SAIGE/"$cur_var".chr"$chr".txt" \
+                            >> "/results/Gene_{wildcards.gene}/"$cur_var".allchr.txt"
+                            rm "/results/tmp/SAIGE/"$cur_var".chr"$chr".txt"
                         done
+                    else
+                        echo 'step2_SPAtests error:'$cur_var >> "/results/Gene_{wildcards.gene}/log.out"
+                    fi
                 else
-                        echo 'SAIGE step2_SPAtests error' > "/results/"{wildcards.variant}".allchr.txt"    
+                    echo 'step1_fitNULLGLMM warning:'$cur_var >> "/results/Gene_{wildcards.gene}/log.out"
+
                 fi
-            else
-                echo 'SAIGE step1_fitNULLGLMM warning' > /results/{wildcards.variant}.allchr.txt
-            fi
-        else
-            echo 'Variant did not pass QC' > /results/{wildcards.variant}.allchr.txt
-        fi
-                        
+            done
+            
+            
         """
