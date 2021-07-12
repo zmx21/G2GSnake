@@ -1,16 +1,22 @@
 configfile: "../config/config.yaml"
 genes_to_run=config["genes"].split(',')
 
+#Write out Tree path
+tree_file = open("../results/tree_path.txt","w")
+tree_file.write(config["nw_file"]+'\n') 
+tree_file.close()
+
 rule all:
     input:
-        tbl=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",gene=genes_to_run),
-        variants=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",gene=genes_to_run),
-        info=expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.info",gene=genes_to_run)
-
+        '../results/tmp/G2G_QC.variants',
+        "../results/tmp/G2G_QC.eigenval"
+        #"../results/G2G_Results.bmat"
+        #expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",gene=genes_to_run)
 rule summarize:
     input:
         tbl=expand("../results/Gene_{gene}/log.out",gene=genes_to_run),
-        host_variants='../results/tmp/G2G_QC.variants'
+        host_variants='../results/tmp/G2G_QC.variants',
+        host_info='../results/tmp/G2G_QC.info'
     output:
         "../results/G2G_Results.bmat"
     conda:
@@ -35,10 +41,10 @@ if config["pathogen_input"] == 'fasta':
             """
             Rscript ./scripts/Expand_FASTA.R {input.seq} {output} {threads}
             """
-
+            
     rule nextalign:
         input:
-            "../results/tmp/pathogen.expanded.fasta",
+            fasta="../results/tmp/pathogen.expanded.fasta",
             ref=config["pathogen_ref"],
             gff=config["pathogen_gff"]
         output:
@@ -69,60 +75,110 @@ if config["pathogen_input"] == 'fasta':
             """
                 Rscript ./scripts/FASTA_to_Tbl.R {input.fasta} {input.covar} {output.tbl} {output.info}
             """
+            
 elif config["pathogen_input"] == 'aa_tbl': 
         import os.path
 
         print('Pathogen AA Table Input')
-        all_path=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt"
-        for path in all_path:
-            if os.path.isfile(path):
-                print('Invalid Pathogen AA Table Path')
-                sys.exit()
+        for gene in genes_to_run:
+            cur_path=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_"+gene+".txt"
+            if not os.path.isfile(cur_path):
+                 print('Invalid Arugment: pathogen_tbl_dir')
+                 sys.exit()
 else:
-    print('Please specify type of pathogen_input in config file')
+    print('Invalid Arugment: pathogen_input. Please specify type of pathogen file input (fasta or aa_tbl)')
     sys.exit()
 
-rule host_QC:
-    input:
-        vcf=config["host_VCF"],
-        covar_file=config["covar_file"]
-    output:
-        bed="../results/tmp/G2G_QC.bed",
-        bim="../results/tmp/G2G_QC.bim",
-        fam="../results/tmp/G2G_QC.fam",
-        vcf='../results/tmp/G2G_QC.vcf.gz',
-        variants='../results/tmp/G2G_QC.variants'
-    params:
-        MAF=config["host_MAF"],
-        missing=config["host_missing"],
-        HWE=config["host_HWE"],
-        excl_chr6=config["excl_chr6"]
-    conda:
-        "envs/QC.yaml"
-    shell:
-        """
-        if [ {params.excl_chr6} -eq 1 ]
-        then
-            plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} --not-chr 6 --geno {params.missing} --mind {params.missing} --hwe {params.HWE} --make-bed --out ../results/tmp/G2G_QC --threads {threads}
 
-        else
-            plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} --geno {params.missing} --mind {params.missing} --hwe {params.HWE} --make-bed --out ../results/tmp/G2G_QC --threads {threads}
+if config["excl_chr6"] is True:
+    rule host_QC_no_chr6:
+        input:
+            vcf=config["host_VCF"],
+            covar_file=config["covar_file"]
+        output:
+            bed="../results/tmp/G2G_QC.bed",
+            bim="../results/tmp/G2G_QC.bim",
+            fam="../results/tmp/G2G_QC.fam",
+            bed_PCA="../results/tmp/G2G_QC_PCA.bed",
+            bim_PCA="../results/tmp/G2G_QC_PCA.bim",
+            fam_PCA="../results/tmp/G2G_QC_PCA.fam",
+            vcf='../results/tmp/G2G_QC.vcf.gz',
+            variants='../results/tmp/G2G_QC.variants',
+            info='../results/tmp/G2G_QC.info'
+        params:
+            MAF=config["host_MAF"],
+            missing=config["host_missing"],
+            HWE=config["host_HWE"],
+            excl_chr6=bool(config["excl_chr6"])
+        conda:
+            "envs/QC.yaml"
+        shell:
+            """
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --not-chr 6 --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --make-bed --out ../results/tmp/G2G_QC_PCA --threads {threads}
+                
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --make-bed --out ../results/tmp/G2G_QC --threads {threads}
 
-        fi
-        
-        plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} --geno {params.missing} --mind {params.missing} --hwe {params.HWE} --export vcf bgz --out ../results/tmp/G2G_QC --threads {threads}
+                
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --export vcf bgz --out ../results/tmp/G2G_QC --threads {threads}
 
-        bcftools index --threads {threads} ../results/tmp/G2G_QC.vcf.gz
-        bcftools query -f '%ID\n' ../results/tmp/G2G_QC.vcf.gz > ../results/tmp/G2G_QC.variants
+                bcftools index --threads {threads} ../results/tmp/G2G_QC.vcf.gz
+                bcftools query -f '%ID\n' ../results/tmp/G2G_QC.vcf.gz > ../results/tmp/G2G_QC.variants
+                bcftools query -f '%ID %CHROM %POS\n' ../results/tmp/G2G_QC.vcf.gz > ../results/tmp/G2G_QC.info
 
-	"""
+	        """
+elif config["excl_chr6"] is False:
+    rule host_QC:
+        input:
+            vcf=config["host_VCF"],
+            covar_file=config["covar_file"]
+        output:
+            bed="../results/tmp/G2G_QC.bed",
+            bim="../results/tmp/G2G_QC.bim",
+            fam="../results/tmp/G2G_QC.fam",
+            vcf='../results/tmp/G2G_QC.vcf.gz',
+            variants='../results/tmp/G2G_QC.variants',
+            info='../results/tmp/G2G_QC.info'
+        params:
+            MAF=config["host_MAF"],
+            missing=config["host_missing"],
+            HWE=config["host_HWE"],
+            excl_chr6=bool(config["excl_chr6"])
+        conda:
+            "envs/QC.yaml"
+        shell:
+            """
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --make-bed --out ../results/tmp/G2G_QC_PCA --threads {threads}
+                
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --make-bed --out ../results/tmp/G2G_QC --threads {threads}
 
+                plink2 --vcf {input.vcf} --keep {input.covar_file} --maf {params.MAF} \
+                --geno {params.missing} --mind {params.missing} --hwe {params.HWE} \
+                --export vcf bgz --out ../results/tmp/G2G_QC --threads {threads}
+
+                bcftools index --threads {threads} ../results/tmp/G2G_QC.vcf.gz
+                bcftools query -f '%ID\n' ../results/tmp/G2G_QC.vcf.gz > ../results/tmp/G2G_QC.variants
+                bcftools query -f '%ID %CHROM %POS\n' ../results/tmp/G2G_QC.vcf.gz > ../results/tmp/G2G_QC.info
+
+	       """
+else:
+    print('Invalid Arugment: excl_chr6. Please specify wheter to exclude chr6')
+    sys.exit()
 
 rule host_PCA:
     input:
-        bed="../results/tmp/G2G_QC.bed",
-        bim="../results/tmp/G2G_QC.bim",
-        fam="../results/tmp/G2G_QC.fam"
+        bed="../results/tmp/G2G_QC_PCA.bed",
+        bim="../results/tmp/G2G_QC_PCA.bim",
+        fam="../results/tmp/G2G_QC_PCA.fam"
     output:
         eigenval="../results/tmp/G2G_QC.eigenval",
         eigenvec="../results/tmp/G2G_QC.eigenvec"
@@ -253,6 +309,4 @@ rule G2G_Saige:
 
                 fi
             done
-            
-            
         """

@@ -27,6 +27,7 @@ for(i in 1:length(g2g_file_paths)){
     if(nrow(df) == 0){
       fm[,which(colnames(fm) == cur_gene_pathogen_variants[j])] <- rep(NA,nrow(fm))
     }else{
+      fm[,which(colnames(fm) == cur_gene_pathogen_variants[j])] <- rep(NA,nrow(fm))
       fm[match(df$SNPID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- df$p.value
     }
   }
