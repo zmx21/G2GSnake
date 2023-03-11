@@ -1,14 +1,16 @@
 #Start with pathogen FASTA file or amino acid tbl
-pathogen_input: "fasta" #or aa_tbl
+pathogen_input: "aa_tbl" #or fasta
+
+#File Paths (When Pathogen input is fasta)
+pathogen_gff: ""
+pathogen_ref: ""
+pathogen_fasta: ""
+
 
 #File Paths
-host_VCF: "../raw_data/host/hbv_gilead_QC_SAIGE.vcf.gz"
-covar_file: "../raw_data/hbv_gilead_QC_SAIGE.tsv"
+host_VCF: "../raw_data/host/G2G_Test.vcf.gz"
+covar_file: "../raw_data/Test_Covars.txt"
 pathogen_tbl_dir: "../raw_data/pathogen/AA_Table/"
-pathogen_fasta: "../raw_data/pathogen/FASTA/test.fasta"
-pathogen_gff: "../raw_data/pathogen/Ref_Genome/GQ924620.gff"
-pathogen_ref: "../raw_data/pathogen/Ref_Genome/GQ924620_NUC_linearize.fasta"
-nw_file: "/mnt/data3/zmxu/G2GSnake/raw_data/pathogen/HBV_WG+og_rr.nw"
 
 #Host Parameters
 host_MAF: 0.05
@@ -16,8 +18,13 @@ host_missing: 0.1
 host_HWE: 1e-6
 N_PC: 4
 excl_chr6: true   #Whether to include chr6 when calculating PCA 
+
 #Pathogen Parameters
-N_pPC: 6
-pathogen_MAC: 10
+pPCA: false #Standard or phylogenetic PC (Tree required)
+N_pPC: 2
+pathogen_MAC: 5
 pathogen_missing: 0.1
-genes: "PC_C,S,X,Pol"
+genes: "Gene_1,Gene_2"
+
+#Tree file in newwick(When pPCA is true)
+nw_file: ""

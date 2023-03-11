@@ -49,8 +49,10 @@ VisualizeG2G <- function(pathogen_info,pathogen_gene,host_snps,fm,p_thresh){
   df_joined <- df %>% dplyr::left_join(pathogen_info %>% dplyr::select(ID,Pathogen_Gene=Gene,Pathogen_Pos = Pos,-Path),by=c('Pathogen_Variant' = 'ID')) %>%
     dplyr::left_join(host_snps %>% dplyr::select(Host_Chr = V1,rsid=V2,Host_Pos=V4),by=c('Host_SNP' = 'rsid'))
   
-  p <- ggplot(df_joined,aes(x=Host_Pos,y = Pathogen_Pos,color = -log10(P))) + facet_grid(~factor(Host_Chr)) + geom_point() + ylab(paste0('Gene ',pathogen_gene,' Position')) + xlab('Chr') +  
-    theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+  p <- ggplot(df_joined,aes(x=Host_Pos,y = Pathogen_Pos,color = -log10(P))) + facet_grid(~factor(Host_Chr,levels = unique(host_snps$V1))) + geom_point() +
+    ylab(paste0('Pathogen Gene ',pathogen_gene,' Position')) + xlab('Host Chr Position') +  ylim(0,max(pathogen_info$Pos[pathogen_info$Gene==pathogen_gene])) +
+    theme_bw() + theme(axis.text.x=element_blank(),axis.ticks.x=element_blank())
+
   
   return(ggplotly(p))
 }
@@ -221,6 +223,3 @@ server <- function(input, output) {
   
 }
 shinyApp(ui = ui, server = server)
-
-# VisualizeG2G(pathogen_info,'S',host_snps,fm,5e-8)
-  

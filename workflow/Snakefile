@@ -8,13 +8,14 @@ tree_file.close()
 
 rule all:
     input:
-        '../results/tmp/G2G_QC.variants',
-        "../results/tmp/G2G_QC.eigenval"
+        #'../results/tmp/G2G_QC.variants',
+        #"../results/tmp/G2G_QC.eigenval"
         #"../results/G2G_Results.bmat"
-        #expand("../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",gene=genes_to_run)
+        expand("../results/tmp/{gene}/{gene}_QC.txt",gene=genes_to_run)
+        
 rule summarize:
     input:
-        tbl=expand("../results/Gene_{gene}/log.out",gene=genes_to_run),
+        tbl=expand("../results/{gene}/log.out",gene=genes_to_run),
         host_variants='../results/tmp/G2G_QC.variants',
         host_info='../results/tmp/G2G_QC.info'
     output:
@@ -66,8 +67,8 @@ if config["pathogen_input"] == 'fasta':
             fasta="../results/FASTA_AA/pathogen.expanded.gene.{gene}.fasta",
             covar=config["covar_file"]
         output:
-            tbl=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",
-            info=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.info"
+            tbl=config["pathogen_tbl_dir"]+"{gene}.txt",
+            info=config["pathogen_tbl_dir"]+"{gene}.info"
         conda:
             "envs/QC.yaml"
         threads: 1
@@ -81,7 +82,7 @@ elif config["pathogen_input"] == 'aa_tbl':
 
         print('Pathogen AA Table Input')
         for gene in genes_to_run:
-            cur_path=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_"+gene+".txt"
+            cur_path=config["pathogen_tbl_dir"]+gene+".txt"
             if not os.path.isfile(cur_path):
                  print('Invalid Arugment: pathogen_tbl_dir')
                  sys.exit()
@@ -189,13 +190,13 @@ rule host_PCA:
     shell:
         "gcta64  --threads {threads} --bfile ../results/tmp/G2G_QC  --autosome  --make-grm  --out ../results/tmp/G2G_QC; gcta64 --threads {threads} --grm ../results/tmp/G2G_QC --pca {params.N_PC} --out ../results/tmp/G2G_QC"
 
-
-rule pathogen_pPCA: 
+if config["pPCA"] is True:
+  rule pathogen_pPCA: 
     input:
-        tbl=expand(config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",gene=genes_to_run),
+        tbl=expand(config["pathogen_tbl_dir"]+"{gene}.txt",gene=genes_to_run),
         nw=config["nw_file"]
     output:
-        "../results/tmp/Gene_{gene}/pPCA_gene_{gene}.txt"
+        "../results/tmp/{gene}/pPCA_{gene}.txt"
     threads: 1
     params:
         N_pPC=config["N_pPC"]
@@ -203,14 +204,27 @@ rule pathogen_pPCA:
         "envs/QC.yaml"
     shell:
         "Rscript ./scripts/Pathogen_pPCA.R {input.tbl} {input.nw} {params.N_pPC} {output}"
+else:
+  rule pathogen_PCA: 
+    input:
+        tbl=expand(config["pathogen_tbl_dir"]+"{gene}.txt",gene=genes_to_run)
+    output:
+        "../results/tmp/{gene}/pPCA_{gene}.txt"
+    threads: 1
+    params:
+        N_pPC=config["N_pPC"]
+    conda:
+        "envs/QC.yaml"
+    shell:
+        "Rscript ./scripts/Pathogen_PCA.R {input.tbl} {params.N_pPC} {output}"
 
 rule merge_covar:
     input:
-        pPCA="../results/tmp/Gene_{gene}/pPCA_gene_{gene}.txt",
+        pPCA="../results/tmp/{gene}/pPCA_{gene}.txt",
         PCA="../results/tmp/G2G_QC.eigenvec",
         covar_file=config["covar_file"]
     output:
-        merged_covar="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt"
+        merged_covar="../results/tmp/{gene}/merged_covar_{gene}.txt"
     threads: 1
     conda:
         "envs/QC.yaml"
@@ -219,13 +233,13 @@ rule merge_covar:
 
 rule pathogen_QC:
     input:
-        tbl=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.txt",
-        info=config["pathogen_tbl_dir"]+"AA_Tbl_Gene_{gene}.info",
-        covar_file="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt"
+        tbl=config["pathogen_tbl_dir"]+"{gene}.txt",
+        info=config["pathogen_tbl_dir"]+"{gene}.info",
+        covar_file="../results/tmp/{gene}/merged_covar_{gene}.txt"
     output:
-        tbl="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",
-        variants="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",
-        info="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.info"
+        tbl="../results/tmp/{gene}/{gene}_QC.txt",
+        variants="../results/tmp/{gene}/{gene}_QC.variants",
+        info="../results/tmp/{gene}/{gene}_QC.info"
     threads: 1
     params:
         pathogen_MAC=config["pathogen_MAC"],
@@ -237,37 +251,37 @@ rule pathogen_QC:
 
 rule G2G_Saige:
     input:
-        aa_tbl="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.txt",
-        patho_variants="../results/tmp/Gene_{gene}/AA_Tbl_Gene_{gene}_QC.variants",
+        aa_tbl="../results/tmp/{gene}/{gene}_QC.txt",
+        patho_variants="../results/tmp/{gene}/{gene}_QC.variants",
         bed="../results/tmp/G2G_QC.bed",
         bim="../results/tmp/G2G_QC.bim",
         fam="../results/tmp/G2G_QC.fam",
-        covar="../results/tmp/Gene_{gene}/merged_covar_gene_{gene}.txt",
+        covar="../results/tmp/{gene}/merged_covar_{gene}.txt",
         vcf='../results/tmp/G2G_QC.vcf.gz',
         variants='../results/tmp/G2G_QC.variants'
     params:
         host_geno="../results/tmp/G2G_QC"
     output:
-        "../results/Gene_{gene}/log.out"
+        "../results/{gene}/log.out"
     container: 
         "docker://wzhou88/saige:0.44.2"
     threads: 22
     shell:
         """ 
             mkdir -p /results/tmp/SAIGE/
-            touch  /results/Gene_{wildcards.gene}/log.out
+            touch  /results/{wildcards.gene}/log.out
             
             #Read in Pathogen variants for each gene to loop through 
-            readarray -t patho_variants < <(cat /results/tmp/Gene_{wildcards.gene}/AA_Tbl_Gene_{wildcards.gene}_QC.variants)
+            readarray -t patho_variants < <(cat /results/tmp/{wildcards.gene}/{wildcards.gene}_QC.variants)
             
             for cur_var in "${{patho_variants[@]}}"
             do
                 echo "Running SAIGE on: "$cur_var
                 step1_fitNULLGLMM.R \
                 --plinkFile=/results/tmp/G2G_QC \
-                --phenoFile=/results/tmp/Gene_{wildcards.gene}/AA_Tbl_Gene_{wildcards.gene}_QC.txt\
+                --phenoFile=/results/tmp/{wildcards.gene}/{wildcards.gene}_QC.txt\
                 --phenoCol=$cur_var \
-                --covarColList=$(sed 's/ /,/g' /results/tmp/Gene_{wildcards.gene}/merged_covar_gene_{wildcards.gene}.txt | head -n 1 | sed 's/IID,//' | sed 's/PID,//') \
+                --covarColList=$(sed 's/ /,/g' /results/tmp/{wildcards.gene}/merged_covar_{wildcards.gene}.txt | head -n 1 | sed 's/IID,//' | sed 's/PID,//') \
                 --sampleIDColinphenoFile=IID \
                 --traitType=binary        \
                 --outputPrefix=/results/tmp/SAIGE/$cur_var \
@@ -294,18 +308,18 @@ rule G2G_Saige:
                     wait
                     if [ -f "/results/tmp/SAIGE/"$cur_var".chr1.txt" ] 
                     then
-                        head -n 1 "/results/tmp/SAIGE/"$cur_var".chr1.txt" > "/results/Gene_{wildcards.gene}/"$cur_var".allchr.txt"
+                        head -n 1 "/results/tmp/SAIGE/"$cur_var".chr1.txt" > "/results/{wildcards.gene}/"$cur_var".allchr.txt"
                         for chr in $(seq 1 1 22)
                         do
                             grep -v 'CHR' "/results/tmp/SAIGE/"$cur_var".chr"$chr".txt" \
-                            >> "/results/Gene_{wildcards.gene}/"$cur_var".allchr.txt"
+                            >> "/results/{wildcards.gene}/"$cur_var".allchr.txt"
                             rm "/results/tmp/SAIGE/"$cur_var".chr"$chr".txt"
                         done
                     else
-                        echo 'step2_SPAtests error:'$cur_var >> "/results/Gene_{wildcards.gene}/log.out"
+                        echo 'step2_SPAtests error:'$cur_var >> "/results/{wildcards.gene}/log.out"
                     fi
                 else
-                    echo 'step1_fitNULLGLMM warning:'$cur_var >> "/results/Gene_{wildcards.gene}/log.out"
+                    echo 'step1_fitNULLGLMM warning:'$cur_var >> "/results/{wildcards.gene}/log.out"
 
                 fi
             done

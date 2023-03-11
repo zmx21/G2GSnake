@@ -96,15 +96,20 @@ pathogen_pca <- function(path_tree,
 
 args <- commandArgs(trailingOnly = TRUE)
 
-tbls <- args[sapply(args,function(x) grepl(x=x,pattern = 'AA_Tbl_Gene'))]
+tbls <- args[sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))]
 data_pathogen <- lapply(tbls,function(x) data.table::fread(x) %>% dplyr::rename(ID = PID)) %>% purrr::reduce(full_join, by = "ID")
 
-path_tree <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Tbl_Gene'))][[1]]
-n.pc <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Tbl_Gene'))][[2]]
-out_path <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Tbl_Gene'))][[3]]
+path_tree <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))][[1]]
+n.pc <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))][[2]]
+out_path <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))][[3]]
 
-
-pPC <- pathogen_pca(data_pathogen=data_pathogen,
-                    path_tree=path_tree,n.pc=as.numeric(n.pc))
+if(n.pc == 0){
+  pPC <- data.frame(PID = data_pathogen$ID)
+  
+}else{
+  pPC <- pathogen_pca(data_pathogen=data_pathogen,
+                      path_tree=path_tree,n.pc=as.numeric(n.pc))
+  
+}
 
 data.table::fwrite(pPC,out_path,sep = ' ',col.names = T,row.names = F)
