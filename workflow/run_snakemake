@@ -1,1 +1,1 @@
-snakemake --use-singularity --cores 88 --rerun-incomplete --singularity-args "-B ../results/:/results/"
+snakemake --use-singularity --cores 1 --rerun-incomplete --singularity-args "-B ./results:/home/results,../raw_data:/raw_data,./scripts:/home/scripts"
