@@ -4,17 +4,17 @@ library(filematrix,quietly=TRUE)
 args <- commandArgs(trailingOnly = TRUE)
 results_dir <- args[sapply(args,function(x) grepl(x=x,pattern = 'log.out'))]
 results_dir <- sapply(results_dir,function(x) gsub(x=x,pattern = 'log.out',replacement = ''))
-
 host_variants_path <- args[!sapply(args,function(x) grepl(x=x,pattern = 'log.out'))][[1]]
 out_path <- args[!sapply(args,function(x) grepl(x=x,pattern = 'log.out'))][[2]]
 
-
 host_variants <- data.table::fread(host_variants_path,header = F)
 g2g_file_paths <- lapply(results_dir,function(x) dir(x)[sapply(dir(x),function(x) grepl(pattern = '.allchr.txt',x = x))])
+print(g2g_file_paths)
+
 pathogen_variants <- lapply(g2g_file_paths,function(x) sapply(x,function(y) strsplit(x=y,'.allchr.txt')[[1]][1],USE.NAMES = F))
 
 #Initialize file matrix
-fm = fm.create(filenamebase = "../results/G2G_Results", nrow = nrow(host_variants),
+fm = fm.create(filenamebase = "./results/G2G_Results", nrow = nrow(host_variants),
                ncol = length(unlist(pathogen_variants)), type = "double")
 colnames(fm) = unlist(pathogen_variants)
 rownames(fm) = host_variants$V1

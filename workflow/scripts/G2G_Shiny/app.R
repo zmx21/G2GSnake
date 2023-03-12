@@ -1,17 +1,26 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
 library(qqman)
 library(filematrix)
 library(shinydashboard)
 library(shiny)
 library(plotly)
 library(data.table)
+library(readr)
 library(shinyWidgets)
 library(latex2exp)
 library(dplyr)
-library(tidyverse)
 library(corrplot)
 
 #Get genes that were analyzed
-results_dir <- 'results/'
+results_dir <- '/home/results/'
 genes <- dir(results_dir)[grepl(dir(results_dir),pattern = 'Gene_')]
 
 #Get results
@@ -116,7 +125,7 @@ VisualizeG2G <- function(pathogen_info,pathogen_gene,host_snps,fm,p_thresh){
 # }
 #pPC vs PC plot
 GeneratePCPlot <- function(pathogen_gene){
-  PCs <- data.table::fread(glue::glue('{results_dir}/tmp/{pathogen_gene}/merged_covar_{pathogen_gene}.txt')) %>%
+  PCs <- data.table::fread(glue::glue('{results_dir}tmp/{pathogen_gene}/merged_covar_{pathogen_gene}.txt')) %>%
     dplyr::select(contains('PC')) 
   PC_Cor <- cor(PCs)
   return(corrplot::corrplot(PC_Cor,method = 'circle',type = 'upper',title = paste0('pPC and PC Correlation - ',pathogen_gene),mar=c(0,0,1,0)))
