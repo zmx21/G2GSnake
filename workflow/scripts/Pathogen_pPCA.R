@@ -93,10 +93,13 @@ pathogen_pca <- function(path_tree,
   return(out)
   
 }
+setwd('/home/')
 
 args <- commandArgs(trailingOnly = TRUE)
 
 tbls <- args[sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))]
+
+
 data_pathogen <- lapply(tbls,function(x) data.table::fread(x) %>% dplyr::rename(ID = PID)) %>% purrr::reduce(full_join, by = "ID")
 
 path_tree <- args[!sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))][[1]]

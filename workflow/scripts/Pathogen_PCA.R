@@ -21,7 +21,7 @@ pathogen_pca <- function(data_pathogen,
   
   
 }
-
+setwd('/home/')
 args <- commandArgs(trailingOnly = TRUE)
 
 tbls <- args[sapply(args,function(x) grepl(x=x,pattern = 'AA_Table'))]

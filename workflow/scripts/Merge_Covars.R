@@ -1,6 +1,6 @@
 library(dplyr,quietly=TRUE,warn.conflicts = FALSE)
 library(data.table,quietly=TRUE)
-
+setwd('/home/')
 args <- commandArgs(trailingOnly = TRUE)
 covar_file_path <- args[[1]]
 pPCA_file_path <- args[[2]]

@@ -1,5 +1,6 @@
 library(dplyr,quietly=TRUE,warn.conflicts = FALSE)
 args <- commandArgs(trailingOnly = TRUE)
+setwd('/home/')
 covar_file_path <- args[[1]]
 aa_tbl_path <- args[[2]]
 aa_info_path <- args[[3]]
