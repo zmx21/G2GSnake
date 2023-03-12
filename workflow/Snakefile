@@ -4,10 +4,7 @@ container: "docker://zmxu/g2gpipeline"
 
 rule all:
     input:
-        #'results/tmp/G2G_QC.variants',
-        #"results/tmp/G2G_QC.eigenval"
-        #"results/G2G_Results.bmat"
-        expand("results/tmp/{gene}/{gene}_QC.txt",gene=genes_to_run)
+        "results/G2G_Results.bmat"
         
 rule summarize:
     input:
