@@ -92,7 +92,7 @@ The following settings can be specified in the [config.yaml](config/config.yaml)
    * whether to exclude chr6 when calcuating PCs. recommended to specify `true` if interested in HLA region
 
 # Usage
-Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings)
+Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to stored in `raw_data/`. 
 
 First step is to clone this repository:
 ```
@@ -102,7 +102,7 @@ From this step on, we will be working in the `workflow` directory:
 ```
 cd G2GSnake/workflow/
 ```
-We can then run the G2GSnake pipeline. The number of cores can be adjusted: 
+We can then run the G2GSnake pipeline. The number of cores can be adjusted by changing the `--cores` flag: 
 ```
 conda activate snakemake
 snakemake --use-singularity --cores 1 --singularity-args "-B ./results:/home/results,../raw_data:/raw_data,./scripts:/home/scripts"
