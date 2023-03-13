@@ -37,17 +37,17 @@ All input data should be stored in [raw_data/](raw_data/)
 ## Pathogen Data
 Pathogen data should be seperated by gene and stored in `raw_data/pathogen/`.
 
-### File 1: Pathogen amino acid matrix (`raw_data/pathogen/<Gene_Name>.txt`)
+### File 1: Pathogen amino acid matrix (`raw_data/pathogen/AA_Table/<Gene_Name>.txt`)
 A binary matrix indicating presence or absence of a amino acid variant. Should contain 0 (Presence), 1 (Absence), or NA (Missing)
 First column should be PID. 
 
-Example: [Gene_1.txt](raw_data/pathogen/Gene_1.txt)
+Example: [Gene_1.txt](raw_data/pathogen/AA_Table/Gene_1.txt)
 
-### File 2: Pathogen variant file (`raw_data/pathogen/<Gene_Name>.info`)
+### File 2: Pathogen variant file (`raw_data/pathogen/AA_Table/<Gene_Name>.info`)
 A variant information file that maps Variant IDs to genes and positions. 
 Columns should be ID, Gene, Pos
 
-Example: [Gene_1.info](raw_data/pathogen/Gene_1.info)
+Example: [Gene_1.info](raw_data/pathogen/AA_Table/Gene_1.info)
 
 ### OPTIONAL File: Phylogenetic tree (`raw_data/pathogen/<File_Name>.nwk`)
 A phylogenetic tree in newick format. Necessary if phylogenetic PCs are calculated instead of standard PCs. 
