@@ -32,7 +32,7 @@ Docker is required to run the pipeline and to launch the R Shiny app. Installati
 
 # Input/Settings
 The settings and file paths are specified in [config.yaml](config/config.yaml)
-All input data should be stored in [raw_data/](raw_data/)
+All input data should be stored in `raw_data`
 
 ## Pathogen Data
 Pathogen data should be seperated by gene and stored in `raw_data/pathogen/`.
@@ -113,7 +113,7 @@ docker run --rm --publish 3838:3838 --mount type=bind,source="$(pwd)"/results,ta
 ```
 The GUI should appear in http://localhost:3838/, which can be viewed in any web browser. 
 
-Raw summary statistics are stored in [G2GSnake/workflow/results/](G2GSnake/workflow/results/), grouped based on pathogen gene. 
+Raw summary statistics are stored in `workflow/results`, grouped based on pathogen gene. 
 
 # Ackowledgements
 Developers of [SAIGE](https://github.com/weizhouUMICH/SAIGE), a GWAS tool that is used in this pipeline
