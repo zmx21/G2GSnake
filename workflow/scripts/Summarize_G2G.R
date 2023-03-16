@@ -9,7 +9,6 @@ out_path <- args[!sapply(args,function(x) grepl(x=x,pattern = 'log.out'))][[2]]
 
 host_variants <- data.table::fread(host_variants_path,header = F)
 g2g_file_paths <- lapply(results_dir,function(x) dir(x)[sapply(dir(x),function(x) grepl(pattern = '.allchr.txt',x = x))])
-print(g2g_file_paths)
 
 pathogen_variants <- lapply(g2g_file_paths,function(x) sapply(x,function(y) strsplit(x=y,'.allchr.txt')[[1]][1],USE.NAMES = F))
 
@@ -23,12 +22,18 @@ for(i in 1:length(g2g_file_paths)){
   cur_gene_results <- paste0(results_dir[i],g2g_file_paths[[i]])
   cur_gene_pathogen_variants <- pathogen_variants[[i]]
   for(j in 1:length(cur_gene_results)){
-    df <- data.table::fread(cur_gene_results[j])
-    if(nrow(df) == 0){
+    df_head <- data.table::fread(cmd = paste0('head -n 2 ',cur_gene_results[j]))
+    if(nrow(df_head) == 0){
       fm[,which(colnames(fm) == cur_gene_pathogen_variants[j])] <- rep(NA,nrow(fm))
     }else{
       fm[,which(colnames(fm) == cur_gene_pathogen_variants[j])] <- rep(NA,nrow(fm))
-      fm[match(df$SNPID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- df$p.value
+      if('p.value' %in% colnames(df_head)){
+        df <- data.table::fread(cur_gene_results[j],select = c('SNPID','p.value'))
+        fm[match(df$SNPID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- df$p.value
+      }else if('P' %in% colnames(df_head)){
+        df <- data.table::fread(cur_gene_results[j],select = c('ID','P'))
+        fm[match(df$ID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- df$P
+      }
     }
   }
 }

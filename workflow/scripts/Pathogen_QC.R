@@ -27,6 +27,10 @@ aa_tbl_filt <- cbind(aa_tbl[,'PID'],aa_tbl[,-'PID'][,..ind_to_keep])
 #Join AA table
 aa_tbl_jned = dplyr::left_join(covar_file,aa_tbl_filt,by=c('PID'='PID')) %>% dplyr::select(-'PID')
 data.table::fwrite(aa_tbl_jned,col.names = T,row.names = F,quote = F,na = 'NA',sep = '\t',file = out_path_tbl)
+
+aa_tbl_jned_PLINK = dplyr::left_join(covar_file %>% dplyr::select(IID,PID),aa_tbl_filt,by=c('PID'='PID')) %>% dplyr::select(-'PID') %>% dplyr::relocate(IID)
+data.table::fwrite(aa_tbl_jned_PLINK,col.names = T,row.names = F,quote = F,na = 'NA',sep = '\t',file = gsub(out_path_tbl,pattern = '.txt',replacement = '_plink.txt'))
+
 write(colnames(aa_tbl_filt[,-'PID']),out_path_variants)
 
 #Write out info table

@@ -237,16 +237,28 @@ server <- function(input, output) {
       names(df) <- ''
       return(df)
     }
+    ReadResultsFile <- function(path,index){
+        header <- colnames(data.table::fread(cmd = paste0('head -n 2 ',path)))
+        if('p.value' %in% header){
+            return(read.table(text = readr::read_lines(path,skip = index,n_max = 1)) %>%
+                dplyr::select(CHR = V1,POS=V2,SNPID=V3,Allele1=V4,Allele2=V5,BETA = V10,SE = V11,p.value = V13,Is.SPA.converge = V15) %>%
+                dplyr::filter(Is.SPA.converge == 1) %>% 
+                dplyr::select(-Is.SPA.converge) %>% 
+                dplyr::relocate(Host_SNP = SNPID,Host_Chr = CHR,Host_Pos = POS,
+                                Host_Allele1=Allele1,Host_Allele2=Allele2,BETA,SE,p.value))
+        }else if ('P' %in% header){
+            return(read.table(text = readr::read_lines(path,skip = index,n_max = 1)) %>%
+                dplyr::select(CHR = V1,POS=V2,SNPID=V3,REF=V4,ALT=V5,OR = V10,LOG_OR_SE = V11,p.value = V13) %>% 
+                    dplyr::relocate(Host_SNP = SNPID,Host_Chr = CHR,Host_Pos = POS,
+                                    Host_Allele1=REF,Host_Allele2=ALT,OR,LOG_OR_SE,p.value))
+            
+        }
+    }
+    
     g2g_results <- lapply(1:length(sig_variants),function(i){
       cur_path <- pathogen_info$Path[match(sig_variants[i],pathogen_info$ID)]
       cur_index <- sig_variants_host_index[[i]]
-      df <- do.call(rbind,lapply(cur_index,function(x) read.table(text = readr::read_lines(cur_path,skip = x,n_max = 1)) %>%
-                                   dplyr::select(CHR = V1,POS=V2,SNPID=V3,Allele1=V4,Allele2=V5,BETA = V10,SE = V11,p.value = V13,Is.SPA.converge = V15) %>%
-                                   dplyr::filter(Is.SPA.converge == 1) %>% 
-                                   dplyr::select(-Is.SPA.converge) %>% 
-                                   dplyr::relocate(Host_SNP = SNPID,Host_Chr = CHR,Host_Pos = POS,
-                                                   Host_Allele1=Allele1,Host_Allele2=Allele2,BETA,SE,p.value)))
-      
+      df <- do.call(rbind,lapply(cur_index,function(x) ReadResultsFile(cur_path,x)))
       return(df)
     })
     names(g2g_results) <- sig_variants
@@ -257,8 +269,15 @@ server <- function(input, output) {
                                   dplyr::relocate(Pathogen_Gene,Pathogen_Pos,Pathogen_Variant) %>% dplyr::arrange(p.value))
   
   output$manhattan <- renderPlotly({
-    cur_result <- data.table::fread(input = pathogen_info$Path[pathogen_info$ID == input$manhattan_variant]) %>% dplyr::filter(p.value < 0.1)
-    manhattanly::manhattanly(cur_result %>% dplyr::select(CHR=CHR,BP=POS,P=p.value,ID=SNPID),snp = 'ID',title = input$manhattan_variant,genomewideline = -log10(5e-8 / length(unlist(pathogen_variants))),suggestiveline = -log10(5e-8))})
+    cur_result <- data.table::fread(input = pathogen_info$Path[pathogen_info$ID == input$manhattan_variant]) 
+    if('p.value' %in% colnames(cur_result)){
+        cur_result <- cur_result %>% dplyr::filter(p.value < 0.1)
+        manhattanly::manhattanly(cur_result %>% dplyr::select(CHR=CHR,BP=POS,P=p.value,ID=SNPID),snp = 'ID',title = input$manhattan_variant,genomewideline = -log10(5e-8 / length(unlist(pathogen_variants))),suggestiveline = -log10(5e-8))
+    }else if('P' %in% colnames(cur_result)){
+        cur_result <- cur_result %>% dplyr::filter(P < 0.1)
+        manhattanly::manhattanly(cur_result %>% dplyr::select(CHR='#CHROM',BP=POS,P=P,ID=ID),snp = 'ID',title = input$manhattan_variant,genomewideline = -log10(5e-8 / length(unlist(pathogen_variants))),suggestiveline = -log10(5e-8))
+    }})
+    
   output$qq <- renderPlot({
     cur_result <- as.vector(fm[,which(colnames(fm)==input$manhattan_variant)])
     chisq1 <- qchisq(1-cur_result,1)
