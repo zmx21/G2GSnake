@@ -182,8 +182,8 @@ if config["N_PC"] > 0:
           bim="results/tmp/G2G_QC_PCA.bim",
           fam="results/tmp/G2G_QC_PCA.fam"
       output:
-          eigenval="results/tmp/G2G_QC.eigenval",
-          eigenvec="results/tmp/G2G_QC.eigenvec"
+          eigenval="results/tmp/G2G_QC_PCA.eigenval",
+          eigenvec="results/tmp/G2G_QC_PCA.eigenvec"
       params:
           N_PC=config["N_PC"]
       shell:
