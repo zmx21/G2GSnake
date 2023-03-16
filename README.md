@@ -58,7 +58,7 @@ Host data should be stored in `raw_data/host/`.
 ### File 1: Host VCF file (`raw_data/host/<File_Name>.vcf.gz`)
    * Should contain host SNPs in all chromosomes. 
 ### File 2: Covars/Mapping File (`raw_data/<Covar_File_Name>.txt`)
-   * First two column should be IDD and PID. PID indicates ID in the pathogen amino acid matrix. IID indicates ID in the vcf file. Additional columns will be included as covariates in the G2G analysis. 
+   * First two column should be IID and PID. PID indicates ID in the pathogen amino acid matrix. IID indicates ID in the vcf file. Additional columns will be included as covariates in the G2G analysis. 
 
 ## Settings
 The following settings can be specified in the [config.yaml](config/config.yaml) file:
@@ -97,7 +97,7 @@ The following settings can be specified in the [config.yaml](config/config.yaml)
    * Whether to exclude chr6 when calcuating PCs. Recommended to specify `true` if interested in HLA region
 
 # Usage
-Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to stored in `raw_data/`. 
+Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to be stored in `raw_data/`. 
 
 First step is to clone this repository:
 ```
