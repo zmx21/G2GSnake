@@ -62,34 +62,39 @@ Host data should be stored in `raw_data/host/`.
 
 ## Settings
 The following settings can be specified in the [config.yaml](config/config.yaml) file:
+### General Settings
+1. `pathogen_input: "aa_tbl"
+   * `fasta` option has not been extensively tested, use with caution. 
+2. `tool: 'PLINK'
+   * `SAIGE` option, slower but implements Generalized Linear Mixed Model that uses SPA. Much better for case-control imbalances (rare pathogen variants). Also, no host PCs usually required as covariates. See [SAIGE_Manuscript](https://doi.org/10.1038/s41588-018-0184-y)
 ### Pathogen Settings
 1. `pPCA: false` 
-   * indicate `true` if phylogenetic PCs are preferred. A tree file must be provided
+   * Indicate `true` if phylogenetic PCs are preferred. A tree file must be provided
 2. `N_pPC: <N_pPCs>`
-   * the number of phylogenetic PCs to include
+   * The number of phylogenetic PCs to include. Can be 0
 3. `pathogen_MAC: <MAC_Threshold>`
-   * pathogen variants with minor allele count (MAC) below the threshold will be filtered out 
+   * Pathogen variants with minor allele count (MAC) below the threshold will be filtered out 
 4. `pathogen_missing: <Missing_Threshold>`
-   * pathogen variants with missingness above this proportion will be filtered out 
+   * Pathogen variants with missingness above this proportion will be filtered out 
 5. `genes: "<Gene_Name_1>,<Gene_Name_2>"`
    * The gene names seperated by a comma. This must correspond to the name of the amino acid matrix and variant file. 
 6. `nw_file: <FILE_PATH>`
    * OPTIONAL. Path to newick tree if phylogenetic PC is specified. 
 ### Host Settings
 1. `host_VCF: "../raw_data/host/<File_Name>.vcf.gz"`
-   * path to VCF file
+   * Path to VCF file
 3. `covar_file: "../raw_data/<Covar_File_Name>.txt"`
-   * path to covars/mapping file
+   * Path to covars/mapping file
 5. `host_MAF: <MAF_Threshold>`
-   * host variants below this threshold will be filtered out. 
+   * Host variants below this threshold will be filtered out. 
 6. `host_missing: <Missing_Threshold>`
-   * host variants with missingness above this proportion will be filtered out 
+   * Host variants with missingness above this proportion will be filtered out 
 7. `host_HWE: 1e-6`
-   * host variants that significantly deviate from Hardy-Weinberg equilibrium will be filtered out.  
+   * Host variants that significantly deviate from Hardy-Weinberg equilibrium will be filtered out.  
 8. `N_PC: <N_PCs>`
-   * number of host PCs to include
+   * Number of host PCs to include. Can be 0
 9. `excl_chr6: true`
-   * whether to exclude chr6 when calcuating PCs. recommended to specify `true` if interested in HLA region
+   * Whether to exclude chr6 when calcuating PCs. Recommended to specify `true` if interested in HLA region
 
 # Usage
 Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to stored in `raw_data/`. 
