@@ -64,7 +64,7 @@ Host data should be stored in `raw_data/host/`.
 The following settings can be specified in the [config.yaml](config/config.yaml) file:
 ### General Settings
 1. `pathogen_input: "aa_tbl"
-   * `fasta` option has not been extensively tested, use with caution. 
+   * `fasta` option can also be used. A multipe-sequence nucleotide alignment in FASTA format is required. Mixed sites can be encoded as ambigious nucleotides. A reference genome (FASTA) file and annotation (GFF) file is also required. 
 2. `tool: 'PLINK'
    * `SAIGE` option, slower but implements Generalized Linear Mixed Model that uses SPA. Much better for case-control imbalances (rare pathogen variants). Also, no host PCs usually required as covariates. See [SAIGE_Manuscript](https://doi.org/10.1038/s41588-018-0184-y)
 ### Pathogen Settings
