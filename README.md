@@ -4,7 +4,7 @@ G2GSnake is a snakemake pipeline that conducts a genome-to-genome (G2G) study us
 More details can be found here: ![TODO Publication](Publication.pdf)
 
 ![Summary of G2GSnake](G2GSnake_Pipeline.png)
-
+Figure created with BioRender.com
 # Dependencies
 ## Snakemake
 Snakemake requires conda to be installed. For Linux systems, this installer can be used: [Miniconda3-latest-Linux-x86_64.sh](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) 
