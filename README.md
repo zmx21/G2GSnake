@@ -1,7 +1,8 @@
 # Description
 G2GSnake is a snakemake pipeline that conducts a genome-to-genome (G2G) study using paired human and pathogen genetic data. Associations between all human and pathogen variants are systematically tested. Principal components (pathogen and host) are used to correct for stratification. Results can be visualized using a R Shiny app that has been built in a docker container. 
 
-More details can be found here: ![TODO Publication](Publication.pdf)
+More details can be found here: [G2GSnake: A Snakemake workflow for host-pathogen genomic association studies
+](https://doi.org/10.1101/2023.04.11.536440)
 
 ![Summary of G2GSnake](G2GSnake_Pipeline.png)
 Figure created with BioRender.com
