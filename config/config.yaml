@@ -7,7 +7,6 @@ pathogen_gff: ""
 pathogen_ref: ""
 pathogen_fasta: ""
 
-
 #File Paths
 host_VCF: "../raw_data/host/G2G_Test.vcf.gz"
 covar_file: "../raw_data/Test_Covars.txt"
@@ -25,7 +24,7 @@ pPCA: false #Standard or phylogenetic PC (Tree required)
 N_pPC: 5
 pathogen_MAC: 5
 pathogen_missing: 0.1
-genes: "Gene_1,Gene_2"
+genes: "" #Keep empty to run all genes
 
 #Tree file in newwick(When pPCA is true)
 nw_file: ""

@@ -1,21 +1,22 @@
+configfile: "../config/config.yaml"
+container: "docker://zmxu/g2gpipeline"
+
 import pandas as pd
 import os
 import glob
 
-configfile: "../config/config.yaml"
 if config["genes"] == '':
   directory = config["pathogen_tbl_dir"]
   files = glob.glob(os.path.join(directory, '*.info'))
-  genes_to_run = [os.path.splitext(file)[1] for file in files]
+  genes_to_run = [os.path.splitext(file)[0].split('/')[-1] for file in files]
+  
 else:
   genes_to_run=config["genes"].split(',')
 
-container: "docker://zmxu/g2gpipeline"
-
 rule all:
     input:
-        expand("results/{gene}/log.out",gene=genes_to_run)
-        #"results/G2G_Results.bmat"
+        #expand("results/{gene}/log.out",gene=genes_to_run)
+        "results/G2G_Results.bmat"
         
 rule summarize:
     input:
@@ -382,7 +383,7 @@ elif config["tool"] == 'regenie':
         vcf='results/tmp/G2G_QC.vcf.gz',
         variants='results/tmp/G2G_QC.variants'
     output:
-        "./results/{gene}/tmp/fit_bin_l1_pred.list"
+        "results/{gene}/tmp/fit_bin_l1_pred.list"
     threads:
         20
     container: 
@@ -427,8 +428,9 @@ elif config["tool"] == 'regenie':
               --run-l1 ./results/{wildcards.gene}/tmp/fit_bin_parallel.master
               
         """
-  os.system("zcat "+ config["host_VCF"]+" | grep -v '#' | awk {'print $1\t$2'} >"+config["host_VCF"]+".info")
-  info_file = pd.read_csv(config["host_VCF"]+"info", sep='\t')
+  os.system("mkdir -p results/tmp/")
+  os.system("zcat <"+ config["host_VCF"]+" | grep -v '#' | awk {'print $1'} > results/tmp/G2G_QC.chr")
+  info_file = pd.read_csv("results/tmp/G2G_QC.chr", sep='\t')
   all_chr = info_file[info_file.columns[0]].unique()
       
   rule convert_bgen:
@@ -438,15 +440,15 @@ elif config["tool"] == 'regenie':
         fam="results/tmp/G2G_QC.fam"
       output:
         bgen = "results/tmp/G2G_QC_{chr}.bgen",
-        sample = "results/tmp/G2G_QC_{chr}.sample",
+        sample = "results/tmp/G2G_QC_{chr}.sample"
       container: 
         "docker://zmxu/plink2"
       shell:
        """
-            # Run PLINK to get the chromosome information
-            all_chr=$(awk '{{print $1}}' {input.bim} | uniq)
-
-            # Extract chromosome numbers from the PLINK output
+            #Get the chromosome information
+            all_chr=$(awk '{{print $1}}' results/tmp/G2G_QC.chr | uniq)
+            
+            # Extract chromosome numbers
             chromosomes=()
             while read -r line; do
               chromosome=$(echo "$line")
@@ -499,10 +501,10 @@ elif config["tool"] == 'regenie':
       log ="results/{gene}/log.out"
     shell:
       """
-        # Run PLINK to get the chromosome information
-        all_chr=$(awk '{{print $1}}' results/tmp/G2G_QC.bim | uniq)
-
-        # Extract chromosome numbers from the PLINK output
+        #Get the chromosome information
+        all_chr=$(awk '{{print $1}}' results/tmp/G2G_QC.chr | uniq)
+            
+        # Extract chromosome numbers
         chromosomes=()
         while read -r line; do
           chromosome=$(echo "$line")
@@ -514,10 +516,19 @@ elif config["tool"] == 'regenie':
             
         for cur_var in "${{patho_variants[@]}}";
         do
+          declare -i cnt=1
+          
           for chromosome in "${{chromosomes[@]}}";
           do
-            cat ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie >> ./results/{wildcards.gene}/bin_out_spa_$cur_var.regenie
+            if [ $cnt -eq 1 ]
+            then
+              head -n 1 ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie > "./results/{wildcards.gene}/"$cur_var".allchr.txt"
+            fi
+              
+            cat ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie | grep -v 'CHROM' >> "./results/{wildcards.gene}/"$cur_var".allchr.txt"
             rm ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie
+            
+            cnt=$(( cnt + 1 ))
           done
         done
         cat ./results/{wildcards.gene}/bin_out_spa_*.log >> ./results/{wildcards.gene}/log.out
