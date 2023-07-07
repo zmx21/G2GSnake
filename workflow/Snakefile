@@ -1,7 +1,16 @@
-configfile: "../config/config.yaml"
-genes_to_run=config["genes"].split(',')
-container: "docker://zmxu/g2gpipeline"
 import pandas as pd
+import os
+import glob
+
+configfile: "../config/config.yaml"
+if config["genes"] == '':
+  directory = config["pathogen_tbl_dir"]
+  files = glob.glob(os.path.join(directory, '*.info'))
+  genes_to_run = [os.path.splitext(file)[1] for file in files]
+else:
+  genes_to_run=config["genes"].split(',')
+
+container: "docker://zmxu/g2gpipeline"
 
 rule all:
     input:
@@ -418,8 +427,9 @@ elif config["tool"] == 'regenie':
               --run-l1 ./results/{wildcards.gene}/tmp/fit_bin_parallel.master
               
         """
-  bim_file = pd.read_csv("results/tmp/G2G_QC.bim", sep='\t')
-  all_chr = bim_file[bim_file.columns[0]].unique()
+  os.system("zcat "+ config["host_VCF"]+" | grep -v '#' | awk {'print $1\t$2'} >"+config["host_VCF"]+".info")
+  info_file = pd.read_csv(config["host_VCF"]+"info", sep='\t')
+  all_chr = info_file[info_file.columns[0]].unique()
       
   rule convert_bgen:
       input:
