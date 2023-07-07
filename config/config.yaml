@@ -1,6 +1,6 @@
 #Start with pathogen FASTA file or amino acid tbl
 pathogen_input: "aa_tbl" #or fasta
-tool: 'PLINK' #or SAIGE
+tool: 'regenie' #or PLINK or SAIGE
 
 #File Paths (When Pathogen input is fasta)
 pathogen_gff: ""
@@ -17,12 +17,12 @@ pathogen_tbl_dir: "../raw_data/pathogen/AA_Table/"
 host_MAF: 0.05
 host_missing: 0.1
 host_HWE: 1e-6
-N_PC: 0
+N_PC: 5
 excl_chr6: true   #Whether to include chr6 when calculating PCA 
 
 #Pathogen Parameters
 pPCA: false #Standard or phylogenetic PC (Tree required)
-N_pPC: 2
+N_pPC: 5
 pathogen_MAC: 5
 pathogen_missing: 0.1
 genes: "Gene_1,Gene_2"

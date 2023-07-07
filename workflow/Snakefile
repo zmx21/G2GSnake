@@ -1,10 +1,12 @@
 configfile: "../config/config.yaml"
 genes_to_run=config["genes"].split(',')
 container: "docker://zmxu/g2gpipeline"
+import pandas as pd
 
 rule all:
     input:
-        "results/G2G_Results.bmat"
+        expand("results/{gene}/log.out",gene=genes_to_run)
+        #"results/G2G_Results.bmat"
         
 rule summarize:
     input:
@@ -227,7 +229,7 @@ rule merge_covar:
     shell:
         "Rscript ./scripts/Merge_Covars.R {input.covar_file} {input.pPCA} {input.PCA} {output.merged_covar}"
 
-rule pathogen_QC:
+rule pathogen_freq_filter:
     input:
         tbl=config["pathogen_tbl_dir"]+"{gene}.txt",
         info=config["pathogen_tbl_dir"]+"{gene}.info",
@@ -284,8 +286,11 @@ if config["tool"] == 'SAIGE':
                 --nThreads={threads} \
                 --LOCO=FALSE 2> "./results/tmp/SAIGE/"$cur_var".NULLGLMM.error" > "./results/tmp/SAIGE/"$cur_var".NULLGLMM.log" || true
                 if [ $(grep -v 'Loading required package:' ./results/tmp/SAIGE/$cur_var.NULLGLMM.error | wc -l) -eq 0 ]
-                then 
-                    for chr in $(seq 1 1 22)
+                then
+                #Print out chromosomes
+                awk '{{print $1}}' {input.bim} | uniq > ./results/tmp/G2G_QC.chr
+                readarray -t chr < <(cat ./results/tmp/G2G_QC.chr)
+                    for chr in "${{chr[@]}}"
                     do
                         step2_SPAtests.R \
                         --vcfFile=./results/tmp/G2G_QC.vcf.gz \
@@ -356,3 +361,155 @@ elif config["tool"] == 'PLINK':
             done
 
         """
+elif config["tool"] == 'regenie':
+  rule G2G_Regenie_Step1:
+    input:
+        aa_tbl="results/tmp/{gene}/{gene}_QC_plink.txt",
+        patho_variants="results/tmp/{gene}/{gene}_QC.variants",
+        bed="results/tmp/G2G_QC.bed",
+        bim="results/tmp/G2G_QC.bim",
+        fam="results/tmp/G2G_QC.fam",
+        covar="results/tmp/{gene}/merged_covar_{gene}_plink.txt",
+        vcf='results/tmp/G2G_QC.vcf.gz',
+        variants='results/tmp/G2G_QC.variants'
+    output:
+        "./results/{gene}/tmp/fit_bin_l1_pred.list"
+    threads:
+        20
+    container: 
+        "docker://zmxu/regenie"
+    shell:
+        """
+            mkdir -p ./results/tmp/regenie/
+
+            #Create Pheno and Covar file
+            {{ echo "FID"; printf "0\n%.0s" $(seq $(($(wc -l < {input.covar}) - 1))); }} > tmp.txt
+            paste tmp.txt {input.covar} > results/tmp/{wildcards.gene}/merged_covar_{wildcards.gene}.regenie.txt
+            paste tmp.txt {input.aa_tbl} > results/tmp/{wildcards.gene}/{wildcards.gene}_QC.regenie.txt
+
+            rm tmp.txt
+            
+            njobs={threads}
+            
+            base_command="regenie \
+            --step 1 \
+            --bt \
+            --loocv \
+            --covarFile ./results/tmp/{wildcards.gene}/merged_covar_{wildcards.gene}.regenie.txt \
+            --phenoFile ./results/tmp/{wildcards.gene}/{wildcards.gene}_QC.regenie.txt \
+            --bsize 1000 "
+
+            
+            $base_command \
+            --bed ./results/tmp/G2G_QC \
+            --out ./results/{wildcards.gene}/tmp/fit_bin_out_l0 \
+            --split-l0 ./results/{wildcards.gene}/tmp/fit_bin_parallel,$njobs
+
+            for job in $(seq 1 $njobs); do
+              $base_command \
+              --bed ./results/tmp/G2G_QC \
+              --out ./results/{wildcards.gene}/tmp/fit_bin_l0_$job \
+              --run-l0 ./results/{wildcards.gene}/tmp/fit_bin_parallel.master,$job
+            done
+
+            $base_command \
+              --bed ./results/tmp/G2G_QC \
+              --out ./results/{wildcards.gene}/tmp/fit_bin_l1 \
+              --run-l1 ./results/{wildcards.gene}/tmp/fit_bin_parallel.master
+              
+        """
+  bim_file = pd.read_csv("results/tmp/G2G_QC.bim", sep='\t')
+  all_chr = bim_file[bim_file.columns[0]].unique()
+      
+  rule convert_bgen:
+      input:
+        bed="results/tmp/G2G_QC.bed",
+        bim="results/tmp/G2G_QC.bim",
+        fam="results/tmp/G2G_QC.fam"
+      output:
+        bgen = "results/tmp/G2G_QC_{chr}.bgen",
+        sample = "results/tmp/G2G_QC_{chr}.sample",
+      container: 
+        "docker://zmxu/plink2"
+      shell:
+       """
+            # Run PLINK to get the chromosome information
+            all_chr=$(awk '{{print $1}}' {input.bim} | uniq)
+
+            # Extract chromosome numbers from the PLINK output
+            chromosomes=()
+            while read -r line; do
+              chromosome=$(echo "$line")
+              chromosomes+=("$chromosome")
+            done <<< "$all_chr"
+
+            for chromosome in "${{chromosomes[@]}}"; do
+              /plink2 --bed {input.bed} --bim {input.bim} --fam {input.fam} --chr $chromosome --export bgen-1.2 'bits=8' --out results/tmp/G2G_QC_$chromosome
+            done
+            
+       """
+  
+  rule G2G_Regenie_Step2:
+    input:
+        aa_tbl="results/tmp/{gene}/{gene}_QC_plink.txt",
+        patho_variants="results/tmp/{gene}/{gene}_QC.variants",
+        bgen = "results/tmp/G2G_QC_{chr}.bgen",
+        sample = "results/tmp/G2G_QC_{chr}.sample",
+        bim="results/tmp/G2G_QC.bim",
+        covar="results/tmp/{gene}/merged_covar_{gene}_plink.txt",
+        vcf='results/tmp/G2G_QC.vcf.gz',
+        variants='results/tmp/G2G_QC.variants',
+        step1="results/{gene}/tmp/fit_bin_l1_pred.list"
+    output:
+        "results/{gene}/bin_out_spa_{chr}.log"
+    threads:
+        23
+    container: 
+        "docker://zmxu/regenie"
+    shell:
+        """
+            regenie \
+            --step 2 \
+            --bgen {input.bgen} \
+            --sample {input.sample} \
+            --covarFile ./results/tmp/{wildcards.gene}/merged_covar_{wildcards.gene}.regenie.txt \
+            --phenoFile ./results/tmp/{wildcards.gene}/{wildcards.gene}_QC.regenie.txt \
+            --bsize 1000 \
+            --bt \
+            --spa \
+            --pThresh 0.01 \
+            --pred {input.step1} \
+            --out ./results/{wildcards.gene}/bin_out_spa_{wildcards.chr}
+            
+        """
+  rule G2G_Regenie_Step2_Merge:
+    input:
+      lambda wildcards: expand("results/{gene}/bin_out_spa_{chr}.log",chr = all_chr,gene = wildcards.gene)
+    output:
+      log ="results/{gene}/log.out"
+    shell:
+      """
+        # Run PLINK to get the chromosome information
+        all_chr=$(awk '{{print $1}}' results/tmp/G2G_QC.bim | uniq)
+
+        # Extract chromosome numbers from the PLINK output
+        chromosomes=()
+        while read -r line; do
+          chromosome=$(echo "$line")
+          chromosomes+=("$chromosome")
+        done <<< "$all_chr"
+
+        #Read in Pathogen variants for each gene to loop through 
+        readarray -t patho_variants < <(cat ./results/tmp/{wildcards.gene}/{wildcards.gene}_QC.variants)
+            
+        for cur_var in "${{patho_variants[@]}}";
+        do
+          for chromosome in "${{chromosomes[@]}}";
+          do
+            cat ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie >> ./results/{wildcards.gene}/bin_out_spa_$cur_var.regenie
+            rm ./results/{wildcards.gene}/bin_out_spa_$chromosome"_"$cur_var.regenie
+          done
+        done
+        cat ./results/{wildcards.gene}/bin_out_spa_*.log >> ./results/{wildcards.gene}/log.out
+      """
+        
