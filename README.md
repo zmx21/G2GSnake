@@ -7,8 +7,8 @@ More details can be found here: [G2GSnake: A Snakemake workflow for host-pathoge
 ![Summary of G2GSnake](G2GSnake_Pipeline.png)
 Figure created with BioRender.com
 # Dependencies
-## Snakemake
-Snakemake requires conda to be installed. For Linux systems, this installer can be used: [Miniconda3-latest-Linux-x86_64.sh](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) 
+## Snakemake and Singularity
+Snakemake and Singularity requires conda to be installed. For Linux systems, this installer can be used: [Miniconda3-latest-Linux-x86_64.sh](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) 
 
 Download the installer and run:
 ```
