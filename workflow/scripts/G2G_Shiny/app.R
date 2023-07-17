@@ -30,7 +30,7 @@ pathogen_variants <- lapply(g2g_file_paths,function(x) sapply(x,function(y) strs
 all_g2g_file_paths <- unlist(lapply(1:length(g2g_file_paths),function(i) paste0(names(g2g_file_paths)[i],'/',g2g_file_paths[[i]])))
 
 #Open file matrix
-fm <- fm.open(glue::glue("{results_dir}G2G_Results"))
+fm <- fm.open(glue::glue("{results_dir}G2G_Results"),readonly = T)
 
 #Get variant info
 pathogen_info <- do.call(rbind,lapply(genes,function(x) data.table::fread(glue::glue("{results_dir}tmp/{x}/{x}_QC.info")) %>% dplyr::filter(ID %in% unlist(pathogen_variants))))
