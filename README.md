@@ -67,7 +67,7 @@ The following settings can be specified in the [config.yaml](config/config.yaml)
 1. `pathogen_input: "aa_tbl"
    * `fasta` option can also be used. A multipe-sequence nucleotide alignment in FASTA format is required. Mixed sites can be encoded as ambigious nucleotides. A reference genome (FASTA) file and annotation (GFF) file is also required. 
 2. `tool: 'PLINK'
-   * `SAIGE` option, slower but implements Generalized Linear Mixed Model that uses SPA. Much better for case-control imbalances (rare pathogen variants). Also, no host PCs usually required as covariates. See [SAIGE_Manuscript](https://doi.org/10.1038/s41588-018-0184-y)
+   * `regenie` option, slower but outperforms PLINK with unbalanced case-control ratios (rare pathogen variants), through the use of the SPA test. See [regenie](https://doi.org/10.1038/s41588-021-00870-7)
 ### Pathogen Settings
 1. `pPCA: false` 
    * Indicate `true` if phylogenetic PCs are preferred. A tree file must be provided
