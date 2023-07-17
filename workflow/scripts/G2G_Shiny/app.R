@@ -123,6 +123,7 @@ VisualizeG2G <- function(pathogen_info,pathogen_gene,host_snps,fm,p_thresh){
 #   }
 #   
 # }
+
 #pPC vs PC plot
 GeneratePCPlot <- function(pathogen_gene){
   PCs <- data.table::fread(glue::glue('{results_dir}tmp/{pathogen_gene}/merged_covar_{pathogen_gene}.txt')) %>%
@@ -154,34 +155,14 @@ PC_plot_page <- fluidPage(
   plotOutput(outputId = "PC_plot",height = '600px',width = '800px')
 )
 
-
-
-phylo_page <- fluidPage(
-  radioButtons(inputId = 'var_type',label = 'Variant Type:',choices = c('Pathogen','Host')),
-  selectizeInput(inputId = 'phylo_gene',label = 'Gene:',choices = NULL),
-  selectizeInput(inputId = 'phylo_variant',label = 'Variant ID:',choices = NULL),
-  plotlyOutput(outputId = "tree")
-)
 body <- dashboardBody(tabItems(tabItem(tabName = "results_plot",results_plot_page),
                                tabItem(tabName = "manhattan",manhattan_page),
                                tabItem(tabName = "tbl",tbl_page),
-                               tabItem(tabName = "phylo",phylo_page)))
+                               tabItem(tabName = "PC",PC_plot_page)))
 side_bar <- dashboardSidebar(sidebarMenu(menuItem("Results Plot", tabName = "results_plot", icon = icon("dashboard")),
                                          menuItem("Results Table", tabName = "tbl", icon = icon("dashboard")),
                                          menuItem("Manhattan Plot", tabName = "manhattan", icon = icon("dashboard")),
                                          menuItem("PC vs pPC Plot", tabName = "PC", icon = icon("dashboard"))))
-
-#Beta - Phylogenetic Tree
-# body <- dashboardBody(tabItems(tabItem(tabName = "results_plot",results_plot_page),
-#                                tabItem(tabName = "manhattan",manhattan_page),
-#                                tabItem(tabName = "tbl",tbl_page),
-#                                tabItem(tabName = "phylo",phylo_page),
-#                                tabItem(tabName = 'PC',PC_plot_page)))
-# side_bar <- dashboardSidebar(sidebarMenu(menuItem("Results Plot", tabName = "results_plot", icon = icon("dashboard")),
-#                                          menuItem("Results Table", tabName = "tbl", icon = icon("dashboard")),
-#                                          menuItem("Manhattan Plot", tabName = "manhattan", icon = icon("dashboard")),
-#                                          menuItem("PC vs pPC Plot", tabName = "PC", icon = icon("dashboard")),
-#                                          menuItem("Phylogenetic Tree", tabName = "phylo", icon = icon("dashboard"))))
 
 ui <- dashboardPage(dashboardHeader(title = 'G2G Results'),side_bar,body)
 
@@ -196,21 +177,7 @@ server <- function(input, output) {
     updateSelectInput(inputId = "PC_Gene",choices = unique(pathogen_info$Gene))
   })
   
-  observe({
-    ifelse(input$var_type == 'Pathogen',choices <- unique(pathogen_info$Gene),choices <- as.character(unique(host_snps$V1)))
-    ifelse(input$var_type == 'Pathogen',label <- 'Pathogen Gene',label <- 'Host Chr')
-    updateSelectizeInput(inputId = "phylo_gene", 
-                         choices = choices,label = label,server = TRUE)
-  })
-  
-  observe({
-    ifelse(input$var_type == 'Pathogen',choices <- pathogen_info$ID[pathogen_info$Gene == input$phylo_gene],choices <- host_snps$V2[as.character(host_snps$V1) == input$phylo_gene])
-    ifelse(input$var_type == 'Pathogen',label <- 'Pathogen Variant ID',label <- 'Host SNP ID')
-    
-    updateSelectizeInput(inputId = "phylo_variant", 
-                         choices = choices,label = label,server = TRUE)
-  })
-  
+
   re <- eventReactive(input$submit_p,{
     sig_variants <- c()
     sig_variants_host_index <- list()
@@ -252,6 +219,13 @@ server <- function(input, output) {
                     dplyr::relocate(Host_SNP = SNPID,Host_Chr = CHR,Host_Pos = POS,
                                     Host_Allele1=REF,Host_Allele2=ALT,OR,LOG_OR_SE,p.value))
             
+        }else if('LOG10P' %in% header){
+          return(read.table(text = readr::read_lines(path,skip = index,n_max = 1)) %>%
+                   dplyr::mutate(P=10^(-1*as.numeric(V13))) %>%
+                   dplyr::select(CHR = V1,POS=V2,SNPID=V3,REF=V4,ALT=V5,BETA = V10,SE = V11,p.value = P) %>% 
+                   dplyr::relocate(Host_SNP = SNPID,Host_Chr = CHR,Host_Pos = POS,
+                                   Host_Allele1=REF,Host_Allele2=ALT,BETA,SE,p.value))
+          
         }
     }
     
@@ -266,7 +240,7 @@ server <- function(input, output) {
   })
   output$tbl <- renderDataTable(data.table::rbindlist(re(),idcol = T) %>%
                                   dplyr::rename(Pathogen_Variant = `.id`) %>% dplyr::left_join(pathogen_info %>% dplyr::select(Pathogen_Variant=ID,Pathogen_Gene = Gene,Pathogen_Pos = Pos)) %>%
-                                  dplyr::relocate(Pathogen_Gene,Pathogen_Pos,Pathogen_Variant) %>% dplyr::arrange(p.value))
+                                  dplyr::relocate(Pathogen_Gene,Pathogen_Pos,Pathogen_Variant) %>% dplyr::arrange(p.value), options = list(scrollX = TRUE))
   
   output$manhattan <- renderPlotly({
     cur_result <- data.table::fread(input = pathogen_info$Path[pathogen_info$ID == input$manhattan_variant]) 
@@ -276,6 +250,10 @@ server <- function(input, output) {
     }else if('P' %in% colnames(cur_result)){
         cur_result <- cur_result %>% dplyr::filter(P < 0.1)
         manhattanly::manhattanly(cur_result %>% dplyr::select(CHR='#CHROM',BP=POS,P=P,ID=ID),snp = 'ID',title = input$manhattan_variant,genomewideline = -log10(5e-8 / length(unlist(pathogen_variants))),suggestiveline = -log10(5e-8))
+    }else if('LOG10P' %in% colnames(cur_result)){
+      cur_result <- cur_result %>% dplyr::mutate(P=10^(-1*as.numeric(LOG10P)))
+      cur_result <- cur_result %>% dplyr::filter(P < 0.1)
+      manhattanly::manhattanly(cur_result %>% dplyr::select(CHR=CHROM,BP=GENPOS,P=P,ID=ID),snp = 'ID',title = input$manhattan_variant,genomewideline = -log10(5e-8 / length(unlist(pathogen_variants))),suggestiveline = -log10(5e-8))
     }})
     
   output$qq <- renderPlot({
@@ -293,12 +271,6 @@ server <- function(input, output) {
     GeneratePCPlot(input$PC_Gene)
   })
   
-  output$tree <- renderPlotly({
-    VisualizePhylo(readLines(con = file(glue::glue("{results_dir}tree_path.txt"))),
-                   lapply(unique(pathogen_info$Gene),function(x) data.table::fread(glue::glue("{results_dir}tmp/Gene_{x}/merged_covar_gene_{x}.txt"))) %>% reduce(inner_join),
-                   type = input$var_type,
-                   variant = input$phylo_variant)
-  })
   re_res_plot <- eventReactive(input$submit_p_plot,{
     res_plot <- VisualizeG2G(pathogen_info,input$result_gene,
                              host_snps,fm,p_thresh = input$p_thresh_result)

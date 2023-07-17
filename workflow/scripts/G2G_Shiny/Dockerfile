@@ -1,6 +1,11 @@
 FROM rocker/shiny:4.2.1
 ENV RENV_CONFIG_REPOS_OVERRIDE https://packagemanager.rstudio.com/cran/latest
 
+RUN apt-get update && apt-get -y install gosu
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
 RUN apt-get update -qq && \ 
   apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
@@ -11,10 +16,19 @@ RUN apt-get update -qq && \
     zlib1g-dev && \
   apt-get clean && \ 
   rm -rf /var/lib/apt/lists/*
+
+ENV _R_SHLIB_STRIP_=true
+
 COPY shiny_renv.lock renv.lock
 RUN Rscript -e "install.packages('renv')"
 RUN Rscript -e "renv::restore()"
-COPY G2G_Shiny /srv/shiny-server/
+
+COPY app.R /srv/shiny-server/
+
 RUN mkdir /home/results/
+
+USER shiny
+
 EXPOSE 3838
+
 CMD ["/usr/bin/shiny-server"]

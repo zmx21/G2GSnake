@@ -18,10 +18,10 @@ After installing conda, install mamba which is required for snakemake
 ```
 conda install -n base -c conda-forge mamba
 ```
-Then install snakemake
+Then install snakemake and singularity
 ```
 conda activate base
-mamba create -c conda-forge -c bioconda -n snakemake snakemake
+mamba create -c conda-forge -c bioconda -n snakemake snakemake singularity 
 ```
 Before running the pipeline, snakemake can be activated by 
 ```
