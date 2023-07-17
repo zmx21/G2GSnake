@@ -395,6 +395,9 @@ elif config["tool"] == 'regenie':
         "docker://zmxu/regenie"
     shell:
         """
+            export LC_ALL="C"
+            export LANGUAGE=""
+            
             mkdir -p ./results/tmp/regenie/
 
             #Create Pheno and Covar file
