@@ -100,6 +100,8 @@ The following settings can be specified in the [config.yaml](config/config.yaml)
 # Usage
 Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to be stored in `raw_data/`. 
 
+Snakemake, Singularity, and Docker all need to be installed, as prerequisites (See [Dependencies](#dependencies)). 
+
 First step is to clone this repository:
 ```
 git clone https://github.com/zmx21/G2GSnake.git
