@@ -1,7 +1,7 @@
 #!/bin/bash
 FILE="$(pwd)"/results/G2G_Results.bmat
 
-file_permission=$(stat -c "%a" $FILE)
+file_permission=$(stat -c "%a" $FILE 2>/dev/null || stat -f '%A' $FILE 2>/dev/null)
 third_digit=$((file_permission % 10))
 
 if [[ $third_digit -lt 4 ]]; then
