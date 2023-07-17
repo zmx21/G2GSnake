@@ -7,7 +7,7 @@ More details can be found here: [G2GSnake: A Snakemake workflow for host-pathoge
 ![Summary of G2GSnake](G2GSnake_Pipeline.png)
 Figure created with BioRender.com
 # Dependencies
-## Snakemake and Singularity
+## Snakemake and Singularity (Required for Method 1)
 Snakemake and Singularity requires conda to be installed. For Linux systems, this installer can be used: [Miniconda3-latest-Linux-x86_64.sh](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html) 
 
 Download the installer and run:
@@ -28,7 +28,7 @@ Before running the pipeline, snakemake can be activated by
 conda activate snakemake
 ```
 
-## Docker
+## Docker (Required for Method 1 and Method 2)
 Docker is required to run the pipeline and to launch the R Shiny app. Installation instructions are system dependent. More details can be found here: [Docker Installation](https://docs.docker.com/engine/install/)
 
 # Input/Settings
@@ -98,9 +98,9 @@ The following settings can be specified in the [config.yaml](config/config.yaml)
    * Whether to exclude chr6 when calcuating PCs. Recommended to specify `true` if interested in HLA region
 
 # Usage
-Here are the steps to run the pipeline for a test dataset (included in this repository). For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to be stored in `raw_data/`. 
+Below are the steps to run the pipeline for a test dataset (included in this repository in `raw_data/`). 
 
-Snakemake, Singularity, and Docker all need to be installed, as prerequisites (See [Dependencies](#dependencies)). 
+For analysis with real data, please adjust paths and settings in [config.yaml](config/config.yaml) according to instructions in [Input/Settings](Input/Settings). All data needs to be stored in `raw_data/`. 
 
 First step is to clone this repository:
 ```
@@ -110,15 +110,34 @@ From this step on, we will be working in the `workflow` directory:
 ```
 cd G2GSnake/workflow/
 ```
+
+## Running the Snakemake Pipeline - Method 1 
+Snakemake, Singularity, and Docker all need to be installed, as prerequisites (See [Dependencies](#dependencies)). 
+
+This method only works for Linux systems. 
+
+
 First, activate the conda environment with snakemake and singularity installed:
 ```
 conda activate snakemake
 ```
-We can then run the G2GSnake pipeline. The number of cores can specified as an argument: 
+We can then launch the G2GSnake pipeline. The number of cores can specified as an argument: 
 ```
 ./run_snakemake.sh <N_Cores>
 ```
-To visualize the results, the R Shiny app can be launched: 
+
+## Running the Snakemake Pipeline - Method 2 
+Only Docker needs to be installed as prerequisite (See [Dependencies](#dependencies)). 
+
+This method can be used for macOS or Windows. A drawback of this method is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
+
+Launch G2GSnake pipeline which has been built as a Docker container. The number of cores can specified as an argument: 
+```
+./run_snakemake_docker.sh <N_Cores>
+```
+
+## Visualiation (Shiny App)
+To visualize the results, the R Shiny app which has been built as a Docker container can be launched: 
 ```
 ./launch_shiny.sh
 ```
