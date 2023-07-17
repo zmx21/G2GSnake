@@ -141,6 +141,8 @@ To visualize the results, the R Shiny app which has been built as a Docker conta
 ```
 ./launch_shiny.sh
 ```
+Depending on system configuration, you may need sudo permission. 
+
 The GUI should appear in http://localhost:3838/, which can be viewed in any web browser. 
 
 Raw summary statistics are stored in `workflow/results`, grouped based on pathogen gene. 
