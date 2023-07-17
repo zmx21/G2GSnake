@@ -136,7 +136,7 @@ Launch G2GSnake pipeline which has been built as a Docker container. The number 
 ./run_snakemake_docker.sh <N_Cores>
 ```
 
-## Visualiation (Shiny App)
+## Visualization (Shiny App)
 To visualize the results, the R Shiny app which has been built as a Docker container can be launched: 
 ```
 ./launch_shiny.sh
