@@ -129,7 +129,7 @@ We can then launch the G2GSnake pipeline. The number of cores can specified as a
 ## Running the Snakemake Pipeline - Method 2 
 Only Docker needs to be installed as prerequisite (See [Dependencies](#dependencies)). 
 
-For macOS or Windows, only this method could be used. This method could also be used for Linux systems, however a drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
+This method could also be used for Linux systems. For macOS, only this method could be used. A drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
 
 Launch G2GSnake pipeline which has been built as a Docker container. The number of cores can specified as an argument: 
 ```
