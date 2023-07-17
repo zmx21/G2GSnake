@@ -1,5 +1,5 @@
 #!/bin/bash
-FILE="$(pwd)"/result/G2G_Results.bmat
+FILE="$(pwd)"/results/G2G_Results.bmat
 
 if ! [[ $(stat -c "%A" $FILE) =~ "r" ]]; then
   echo "Please add read permission: chmod a+r ./results/G2G_Results.*"
