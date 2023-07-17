@@ -108,14 +108,17 @@ From this step on, we will be working in the `workflow` directory:
 ```
 cd G2GSnake/workflow/
 ```
-We can then run the G2GSnake pipeline. The number of cores can be adjusted by changing the `--cores` flag: 
+First, activate the conda environment with snakemake and singularity installed:
 ```
 conda activate snakemake
-snakemake --use-singularity --cores 1 --singularity-args "-B ./results:/home/results,../raw_data:/raw_data,./scripts:/home/scripts"
+```
+We can then run the G2GSnake pipeline. The number of cores can specified as an argument: 
+```
+./run_snakemake.sh <N_Cores>
 ```
 To visualize the results, the R Shiny app can be launched: 
 ```
-docker run --rm --publish 3838:3838 --mount type=bind,source="$(pwd)"/results,target=/home/results zmxu/g2g_shiny_docker
+./launch_shiny.sh
 ```
 The GUI should appear in http://localhost:3838/, which can be viewed in any web browser. 
 
