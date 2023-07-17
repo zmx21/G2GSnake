@@ -1,6 +1,6 @@
 #Start with pathogen FASTA file or amino acid tbl
 pathogen_input: "aa_tbl" #or fasta
-tool: 'regenie' #or PLINK or SAIGE
+tool: 'regenie' #or PLINK
 
 #File Paths (When Pathogen input is fasta)
 pathogen_gff: ""
