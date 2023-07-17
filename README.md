@@ -21,7 +21,7 @@ conda install -n base -c conda-forge mamba
 Then install snakemake and singularity
 ```
 conda activate base
-mamba create -c conda-forge -c bioconda -n snakemake snakemake singularity
+mamba create -c conda-forge -c bioconda -n snakemake snakemake 
 ```
 Before running the pipeline, snakemake can be activated by 
 ```
