@@ -146,7 +146,7 @@ The GUI should appear in http://localhost:3838/, which can be viewed in any web 
 Raw summary statistics are stored in `workflow/results`, grouped based on pathogen gene. 
 
 # Ackowledgements
-Developers of [SAIGE](https://github.com/weizhouUMICH/SAIGE), a GWAS tool that is used in this pipeline
+Developers of [regenie](https://rgcgithub.github.io/regenie/), a GWAS tool that is used in this pipeline
 
 [Olivier Naret](https://github.com/onaret), whose [G2G-Simulator](https://github.com/onaret/G2G-Simulator) tool was used to construct the test dataset. 
 
