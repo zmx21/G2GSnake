@@ -111,7 +111,17 @@ From this step on, we will be working in the `workflow` directory:
 cd G2GSnake/workflow/
 ```
 
-## Running the Snakemake Pipeline - Method 1 
+## Running the Snakemake Pipeline - Method 1
+Only Docker needs to be installed as prerequisite (See [Dependencies](#dependencies)). 
+
+This method works for all macOS and Linux. A drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
+
+Launch G2GSnake pipeline which has been built as a Docker container. The number of cores can specified as an argument: 
+```
+./run_snakemake_docker.sh <N_Cores>
+```
+
+## Running the Snakemake Pipeline - Method 2 
 Snakemake, Singularity, and Docker all need to be installed, as prerequisites (See [Dependencies](#dependencies)). 
 
 This method only works for Linux systems. 
@@ -124,16 +134,6 @@ conda activate snakemake
 We can then launch the G2GSnake pipeline. The number of cores can specified as an argument: 
 ```
 ./run_snakemake.sh <N_Cores>
-```
-
-## Running the Snakemake Pipeline - Method 2 
-Only Docker needs to be installed as prerequisite (See [Dependencies](#dependencies)). 
-
-This method could also be used for Linux systems. For macOS, only this method could be used. A drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
-
-Launch G2GSnake pipeline which has been built as a Docker container. The number of cores can specified as an argument: 
-```
-./run_snakemake_docker.sh <N_Cores>
 ```
 
 ## Visualization (Shiny App)
