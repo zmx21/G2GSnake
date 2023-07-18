@@ -114,7 +114,7 @@ cd G2GSnake/workflow/
 ## Running the Snakemake Pipeline - Method 1
 Only Docker needs to be installed as prerequisite (See [Dependencies](#dependencies)). 
 
-This method works for all macOS and Linux. A drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
+This method works for both macOS and Linux. A drawback is that the Snakefile cannot be modified to create custom rules or to modify existing rules. 
 
 Launch G2GSnake pipeline which has been built as a Docker container. The number of cores can specified as an argument: 
 ```
