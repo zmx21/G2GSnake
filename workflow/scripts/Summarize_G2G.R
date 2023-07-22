@@ -35,7 +35,7 @@ for(i in 1:length(g2g_file_paths)){
         fm[match(df$ID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- df$P
       }else if ("LOG10P" %in% colnames(df_head)){
         df <- data.table::fread(cur_gene_results[j],select = c('ID','LOG10P'))
-        fm[match(df$ID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- 10^(as.numeric(df$LOG10P))
+        fm[match(df$ID,rownames(fm)),which(colnames(fm) == cur_gene_pathogen_variants[j])] <- 10^(-1*as.numeric(df$LOG10P))
       }
     }
   }
